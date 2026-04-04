@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/store.dart';
-import '../models/category.dart';
+import '../models/category.dart' as models;
 import '../models/product.dart';
 import '../services/database_service.dart';
 import '../services/notification_service.dart';
@@ -10,21 +10,21 @@ class InventoryProvider extends ChangeNotifier {
   final NotificationService _notifications = NotificationService();
 
   List<Store> _stores = [];
-  List<Category> _categories = [];
+  List<models.Category> _categories = [];
   List<Product> _products = [];
   List<String> _brands = [];
 
   Store? _selectedStore;
-  Category? _selectedCategory;
+  models.Category? _selectedCategory;
   String? _selectedBrand;
   String _searchQuery = '';
 
   List<Store> get stores => _stores;
-  List<Category> get categories => _categories;
+  List<models.Category> get categories => _categories;
   List<Product> get products => _products;
   List<String> get brands => _brands;
   Store? get selectedStore => _selectedStore;
-  Category? get selectedCategory => _selectedCategory;
+  models.Category? get selectedCategory => _selectedCategory;
   String? get selectedBrand => _selectedBrand;
   String get searchQuery => _searchQuery;
 
@@ -69,7 +69,7 @@ class InventoryProvider extends ChangeNotifier {
     loadProducts();
   }
 
-  void setSelectedCategory(Category? category) {
+  void setSelectedCategory(models.Category? category) {
     _selectedCategory = category;
     loadProducts();
   }
@@ -106,12 +106,12 @@ class InventoryProvider extends ChangeNotifier {
   // ── Category management ──
   Future<void> addCategory(String name, String? description) async {
     if (_selectedStore == null) return;
-    final cat = Category(storeId: _selectedStore!.id!, name: name, description: description);
+    final cat = models.Category(storeId: _selectedStore!.id!, name: name, description: description);
     await _db.insertCategory(cat);
     await loadCategories();
   }
 
-  Future<void> editCategory(Category category) async {
+  Future<void> editCategory(models.Category category) async {
     await _db.updateCategory(category);
     await loadCategories();
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
-import '../models/category.dart';
+import '../models/category.dart' as models;
 
 class StoreDetailScreen extends StatefulWidget {
   const StoreDetailScreen({super.key});
@@ -200,7 +200,7 @@ class _StatChip extends StatelessWidget {
 }
 
 class _CategoryCard extends StatelessWidget {
-  final Category category;
+  final models.Category category;
   const _CategoryCard({required this.category});
 
   static const _icons = {
