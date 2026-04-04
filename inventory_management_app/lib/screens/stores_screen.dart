@@ -3,6 +3,11 @@ import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
 import '../models/store.dart';
 
+/// displaying the list of all stores and allowing the user to add new ones.
+///
+/// this is the main landing screen after the splash. showing store cards
+/// in a scrollable list. tapping a card navigates to the store detail view,
+/// while long-pressing reveals a delete option.
 class StoresScreen extends StatefulWidget {
   const StoresScreen({super.key});
 
@@ -14,6 +19,7 @@ class _StoresScreenState extends State<StoresScreen> {
   @override
   void initState() {
     super.initState();
+    // loading stores from the database after the widget is built
     Future.microtask(() => context.read<InventoryProvider>().loadStores());
   }
 
@@ -29,6 +35,7 @@ class _StoresScreenState extends State<StoresScreen> {
       ),
       body: Consumer<InventoryProvider>(
         builder: (context, provider, _) {
+          // showing an empty state when no stores exist
           if (provider.stores.isEmpty) {
             return Center(
               child: Column(
@@ -44,6 +51,7 @@ class _StoresScreenState extends State<StoresScreen> {
             );
           }
 
+          // rendering the store list with cards
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: provider.stores.length,
@@ -54,6 +62,7 @@ class _StoresScreenState extends State<StoresScreen> {
           );
         },
       ),
+      // floating action button for adding a new store
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
@@ -63,6 +72,8 @@ class _StoresScreenState extends State<StoresScreen> {
     );
   }
 
+  /// showing a dialog with text fields for creating a new store.
+  /// validating that name and address are provided before saving.
   void _showAddStoreDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final addressCtrl = TextEditingController();
@@ -88,6 +99,7 @@ class _StoresScreenState extends State<StoresScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
+              // ensuring required fields are not empty before saving
               if (nameCtrl.text.trim().isNotEmpty && addressCtrl.text.trim().isNotEmpty) {
                 context.read<InventoryProvider>().addStore(
                   nameCtrl.text.trim(),
@@ -105,6 +117,8 @@ class _StoresScreenState extends State<StoresScreen> {
   }
 }
 
+/// rendering a single store as a tappable card with name, address, and phone.
+/// tapping navigates to the store detail screen. long-pressing shows delete option.
 class _StoreCard extends StatelessWidget {
   final Store store;
   const _StoreCard({required this.store});
@@ -118,6 +132,7 @@ class _StoreCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
+          // selecting the store and navigating to its detail view
           context.read<InventoryProvider>().selectStore(store);
           Navigator.pushNamed(context, '/store-detail');
         },
@@ -126,6 +141,7 @@ class _StoreCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
+              // store icon with themed background
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -135,6 +151,7 @@ class _StoreCard extends StatelessWidget {
                 child: const Icon(Icons.store_rounded, size: 32, color: Color(0xFF1A237E)),
               ),
               const SizedBox(width: 16),
+              // store details (name, address, phone)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,7 +166,7 @@ class _StoreCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              const Icon(Icons.chevron_right, color: Colors.grey), // navigation hint arrow
             ],
           ),
         ),
@@ -157,6 +174,7 @@ class _StoreCard extends StatelessWidget {
     );
   }
 
+  /// showing a bottom sheet with the option to delete this store.
   void _showStoreOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
