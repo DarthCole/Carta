@@ -1,19 +1,24 @@
 /// representing an individual product in a store's inventory.
 ///
-/// tracking stock levels, pricing, barcode data, and verification status.
-/// mapping to the `products` table in sqlite.
+/// now includes supplier info, delivery tracking, manual low-stock flagging,
+/// and reorder interval for time-based "Reorder Soon" logic.
 class Product {
-  final int? id; // auto-generated primary key from sqlite
-  final int storeId; // foreign key linking to the parent store
-  final int categoryId; // foreign key linking to the product's category
-  final String name; // display name of the product
-  final String brand; // manufacturer or brand name
-  final String? barcode; // optional barcode or qr code value for scanning
-  final int quantity; // current stock count on hand
-  final int restockThreshold; // minimum stock level before triggering a low-stock alert
-  final double price; // unit price in ghc
-  final bool verified; // indicating whether the product has been verified via barcode scan
-  final DateTime lastUpdated; // timestamp of the most recent modification
+  final int? id;
+  final int storeId;
+  final int categoryId;
+  final String name;
+  final String brand;
+  final String? barcode;
+  final int quantity;
+  final int restockThreshold;
+  final double price;
+  final bool verified;
+  final DateTime lastUpdated;
+  // ── new fields from Team Progress Update spec ──
+  final String? supplier;
+  final DateTime? lastDeliveryDate;
+  final bool lowStockFlagged; // manual low-stock flag by store manager
+  final int reorderIntervalDays; // typical days between deliveries
 
   Product({
     this.id,
@@ -23,14 +28,16 @@ class Product {
     required this.brand,
     this.barcode,
     required this.quantity,
-    this.restockThreshold = 10, // defaulting to 10 units as the restock trigger
+    this.restockThreshold = 10,
     required this.price,
     this.verified = false,
     DateTime? lastUpdated,
-  }) : lastUpdated = lastUpdated ?? DateTime.now(); // defaulting to now if not provided
+    this.supplier,
+    this.lastDeliveryDate,
+    this.lowStockFlagged = false,
+    this.reorderIntervalDays = 7,
+  }) : lastUpdated = lastUpdated ?? DateTime.now();
 
-  /// converting the product instance to a map for sqlite insertion.
-  /// storing the verified flag as an integer (0/1) for sqlite compatibility.
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -42,13 +49,15 @@ class Product {
       'quantity': quantity,
       'restock_threshold': restockThreshold,
       'price': price,
-      'verified': verified ? 1 : 0, // converting bool to int for sqlite
+      'verified': verified ? 1 : 0,
       'last_updated': lastUpdated.toIso8601String(),
+      'supplier': supplier,
+      'last_delivery_date': lastDeliveryDate?.toIso8601String(),
+      'low_stock_flagged': lowStockFlagged ? 1 : 0,
+      'reorder_interval_days': reorderIntervalDays,
     };
   }
 
-  /// constructing a product from a sqlite row map.
-  /// parsing the verified integer back to a boolean.
   factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
       id: map['id'] as int?,
@@ -60,13 +69,17 @@ class Product {
       quantity: map['quantity'] as int,
       restockThreshold: map['restock_threshold'] as int? ?? 10,
       price: (map['price'] as num).toDouble(),
-      verified: (map['verified'] as int? ?? 0) == 1, // converting int back to bool
+      verified: (map['verified'] as int? ?? 0) == 1,
       lastUpdated: DateTime.parse(map['last_updated'] as String),
+      supplier: map['supplier'] as String?,
+      lastDeliveryDate: map['last_delivery_date'] != null
+          ? DateTime.parse(map['last_delivery_date'] as String)
+          : null,
+      lowStockFlagged: (map['low_stock_flagged'] as int? ?? 0) == 1,
+      reorderIntervalDays: map['reorder_interval_days'] as int? ?? 7,
     );
   }
 
-  /// creating a modified copy of this product, preserving unchanged fields.
-  /// resetting lastUpdated to now on every copy to track modifications.
   Product copyWith({
     int? id,
     int? storeId,
@@ -79,6 +92,10 @@ class Product {
     double? price,
     bool? verified,
     DateTime? lastUpdated,
+    String? supplier,
+    DateTime? lastDeliveryDate,
+    bool? lowStockFlagged,
+    int? reorderIntervalDays,
   }) {
     return Product(
       id: id ?? this.id,
@@ -92,10 +109,29 @@ class Product {
       price: price ?? this.price,
       verified: verified ?? this.verified,
       lastUpdated: lastUpdated ?? DateTime.now(),
+      supplier: supplier ?? this.supplier,
+      lastDeliveryDate: lastDeliveryDate ?? this.lastDeliveryDate,
+      lowStockFlagged: lowStockFlagged ?? this.lowStockFlagged,
+      reorderIntervalDays: reorderIntervalDays ?? this.reorderIntervalDays,
     );
   }
 
-  /// checking whether the current stock is at or below the restock threshold.
-  /// returning true when a restock notification should be considered.
+  /// automatic threshold-based restock check
   bool get needsRestock => quantity <= restockThreshold;
+
+  /// time-based "Reorder Soon" logic: if days since last delivery
+  /// exceeds the typical reorder interval, suggest reorder
+  bool get reorderSoon {
+    if (lastDeliveryDate == null) return false;
+    final daysSinceDelivery = DateTime.now().difference(lastDeliveryDate!).inDays;
+    return daysSinceDelivery >= reorderIntervalDays;
+  }
+
+  /// overall status for display badges
+  String get stockStatus {
+    if (lowStockFlagged) return 'Low Stock';
+    if (reorderSoon) return 'Reorder Soon';
+    if (needsRestock) return 'Low Stock';
+    return 'OK';
+  }
 }

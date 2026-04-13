@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
 import '../models/store.dart';
 
-/// displaying the list of all stores and allowing the user to add new ones.
-///
-/// this is the main landing screen after the splash. showing store cards
-/// in a scrollable list. tapping a card navigates to the store detail view,
-/// while long-pressing reveals a delete option.
 class StoresScreen extends StatefulWidget {
   const StoresScreen({super.key});
 
@@ -19,41 +15,44 @@ class _StoresScreenState extends State<StoresScreen> {
   @override
   void initState() {
     super.initState();
-    // loading stores from the database after the widget is built
     Future.microtask(() => context.read<InventoryProvider>().loadStores());
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: const Text('My Stores'),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('My Stores', style: TextStyle(fontWeight: FontWeight.w700)),
+        centerTitle: false,
       ),
       body: Consumer<InventoryProvider>(
         builder: (context, provider, _) {
-          // showing an empty state when no stores exist
           if (provider.stores.isEmpty) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.store_outlined, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text('No stores yet', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.store_outlined, size: 56, color: theme.colorScheme.primary),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('No stores yet', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
-                  const Text('Tap + to add your first store'),
+                  Text('Tap + to add your first store', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             );
           }
 
-          // rendering the store list with cards
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
             itemCount: provider.stores.length,
             itemBuilder: (context, index) {
               final store = provider.stores[index];
@@ -62,111 +61,118 @@ class _StoresScreenState extends State<StoresScreen> {
           );
         },
       ),
-      // floating action button for adding a new store
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddStoreDialog(context),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Add Store'),
       ),
     );
   }
 
-  /// showing a dialog with text fields for creating a new store.
-  /// validating that name and address are provided before saving.
   void _showAddStoreDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final addressCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Store'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Store Name', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone (optional)', border: OutlineInputBorder())),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              // ensuring required fields are not empty before saving
-              if (nameCtrl.text.trim().isNotEmpty && addressCtrl.text.trim().isNotEmpty) {
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 20),
+            Text('New Store', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 20),
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Store Name', border: OutlineInputBorder(), prefixIcon: Icon(Icons.store_rounded)), textCapitalization: TextCapitalization.words),
+            const SizedBox(height: 14),
+            TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder(), prefixIcon: Icon(Icons.location_on_rounded)), textCapitalization: TextCapitalization.words),
+            const SizedBox(height: 14),
+            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone (optional)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.phone_rounded)), keyboardType: TextInputType.phone),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty || addressCtrl.text.trim().isEmpty) return;
                 context.read<InventoryProvider>().addStore(
-                  nameCtrl.text.trim(),
-                  addressCtrl.text.trim(),
+                  nameCtrl.text.trim(), addressCtrl.text.trim(),
                   phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
                 );
                 Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
+              },
+              icon: const Icon(Icons.check_rounded),
+              label: const Text('Create Store'),
+              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// rendering a single store as a tappable card with name, address, and phone.
-/// tapping navigates to the store detail screen. long-pressing shows delete option.
 class _StoreCard extends StatelessWidget {
   final Store store;
   const _StoreCard({required this.store});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
-      elevation: 3,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          // selecting the store and navigating to its detail view
-          context.read<InventoryProvider>().selectStore(store);
+          HapticFeedback.lightImpact();
+          final provider = context.read<InventoryProvider>();
+          provider.selectStore(store);
           Navigator.pushNamed(context, '/store-detail');
         },
         onLongPress: () => _showStoreOptions(context),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              // store icon with themed background
               Container(
-                padding: const EdgeInsets.all(14),
+                width: 52, height: 52,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A237E).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: theme.colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.store_rounded, size: 32, color: Color(0xFF1A237E)),
+                child: Icon(Icons.storefront_rounded, color: theme.colorScheme.primary, size: 26),
               ),
               const SizedBox(width: 16),
-              // store details (name, address, phone)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(store.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(store.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Text(store.address, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Expanded(child: Text(store.address, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
                     if (store.phone != null) ...[
                       const SizedBox(height: 2),
-                      Text(store.phone!, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                      Row(
+                        children: [
+                          Icon(Icons.phone_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Text(store.phone!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                        ],
+                      ),
                     ],
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey), // navigation hint arrow
+              Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -174,8 +180,8 @@ class _StoreCard extends StatelessWidget {
     );
   }
 
-  /// showing a bottom sheet with the option to delete this store.
   void _showStoreOptions(BuildContext context) {
+    HapticFeedback.mediumImpact();
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
