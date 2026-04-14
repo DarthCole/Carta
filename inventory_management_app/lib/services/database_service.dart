@@ -20,6 +20,16 @@ class DatabaseService {
     return _database!;
   }
 
+  Future<void> clearAllData() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('purchase_orders');
+      await txn.delete('products');
+      await txn.delete('categories');
+      await txn.delete('stores');
+    });
+  }
+
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'carta_v2.db');

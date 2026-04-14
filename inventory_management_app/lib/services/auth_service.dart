@@ -1,5 +1,6 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'database_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -36,6 +37,8 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
+      // Clear all local SQLite data so it doesn't leak to the next user logging in on this device
+      await DatabaseService().clearAllData();
       await _supabase.auth.signOut();
     } catch (e) {
       debugPrint('AuthService signOut error: $e');

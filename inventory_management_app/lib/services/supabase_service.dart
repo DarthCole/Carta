@@ -40,10 +40,18 @@ class SupabaseService {
     }
   }
 
+  Map<String, dynamic> _injectUserId(Map<String, dynamic> data) {
+    final user = _supabase.auth.currentUser;
+    if (user != null) {
+      data['user_id'] = user.id;
+    }
+    return data;
+  }
+
   // ── stores ──
   Future<void> upsertStore(Store store) async {
     try {
-      await _supabase.from('stores').upsert(store.toMap());
+      await _supabase.from('stores').upsert(_injectUserId(store.toMap()));
       debugPrint('Supabase: synced store ${store.id}');
     } catch (e) {
       debugPrint('Supabase sync error (store): $e');
@@ -52,7 +60,9 @@ class SupabaseService {
 
   Future<void> deleteStore(int id) async {
     try {
-      await _supabase.from('stores').delete().eq('id', id);
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+      await _supabase.from('stores').delete().eq('id', id).eq('user_id', user.id);
       debugPrint('Supabase: deleted store $id');
     } catch (e) {
       debugPrint('Supabase sync error (delete store): $e');
@@ -62,7 +72,7 @@ class SupabaseService {
   // ── categories ──
   Future<void> upsertCategory(models.Category category) async {
     try {
-      await _supabase.from('categories').upsert(category.toMap());
+      await _supabase.from('categories').upsert(_injectUserId(category.toMap()));
       debugPrint('Supabase: synced category ${category.id}');
     } catch (e) {
       debugPrint('Supabase sync error (category): $e');
@@ -71,7 +81,9 @@ class SupabaseService {
 
   Future<void> deleteCategory(int id) async {
     try {
-      await _supabase.from('categories').delete().eq('id', id);
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+      await _supabase.from('categories').delete().eq('id', id).eq('user_id', user.id);
       debugPrint('Supabase: deleted category $id');
     } catch (e) {
       debugPrint('Supabase sync error (delete category): $e');
@@ -81,7 +93,7 @@ class SupabaseService {
   // ── products ──
   Future<void> upsertProduct(Product product) async {
     try {
-      await _supabase.from('products').upsert(product.toMap());
+      await _supabase.from('products').upsert(_injectUserId(product.toMap()));
       debugPrint('Supabase: synced product ${product.id}');
     } catch (e) {
       debugPrint('Supabase sync error (product): $e');
@@ -90,7 +102,9 @@ class SupabaseService {
 
   Future<void> deleteProduct(int id) async {
     try {
-      await _supabase.from('products').delete().eq('id', id);
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+      await _supabase.from('products').delete().eq('id', id).eq('user_id', user.id);
       debugPrint('Supabase: deleted product $id');
     } catch (e) {
       debugPrint('Supabase sync error (delete product): $e');
@@ -100,7 +114,7 @@ class SupabaseService {
   // ── purchase orders ──
   Future<void> upsertPurchaseOrder(PurchaseOrder order) async {
     try {
-      await _supabase.from('purchase_orders').upsert(order.toMap());
+      await _supabase.from('purchase_orders').upsert(_injectUserId(order.toMap()));
       debugPrint('Supabase: synced purchase order ${order.id}');
     } catch (e) {
       debugPrint('Supabase sync error (purchase_order): $e');
@@ -109,7 +123,9 @@ class SupabaseService {
 
   Future<void> deletePurchaseOrder(int id) async {
     try {
-      await _supabase.from('purchase_orders').delete().eq('id', id);
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+      await _supabase.from('purchase_orders').delete().eq('id', id).eq('user_id', user.id);
       debugPrint('Supabase: deleted purchase order $id');
     } catch (e) {
       debugPrint('Supabase sync error (delete purchase_order): $e');
