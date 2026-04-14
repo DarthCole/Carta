@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
 import '../models/store.dart';
+import '../services/auth_service.dart';
 
 class StoresScreen extends StatefulWidget {
   const StoresScreen({super.key});
@@ -26,6 +27,19 @@ class _StoresScreenState extends State<StoresScreen> {
       appBar: AppBar(
         title: const Text('My Stores', style: TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Sign Out',
+            onPressed: () async {
+              HapticFeedback.mediumImpact();
+              await AuthService().signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushReplacementNamed('/login');
+              }
+            },
+          ),
+        ],
       ),
       body: Consumer<InventoryProvider>(
         builder: (context, provider, _) {

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../providers/inventory_provider.dart';
 import '../models/product.dart';
 import '../models/purchase_order.dart';
+import '../services/supabase_service.dart';
 
 class StoreDetailScreen extends StatefulWidget {
   const StoreDetailScreen({super.key});
@@ -289,6 +290,19 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
             }),
             _QuickAction(label: 'New Order', icon: Icons.add_shopping_cart_rounded, onTap: () => Navigator.pushNamed(context, '/purchase-orders')),
             _QuickAction(label: 'Categories', icon: Icons.category_rounded, onTap: () => _showAddCategoryDialog(context)),
+            _QuickAction(label: 'Sync to Cloud', icon: Icons.cloud_sync_rounded, onTap: () async {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Syncing to Supabase...')));
+              try {
+                await SupabaseService().syncAll();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sync complete!')));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sync failed: $e')));
+                }
+              }
+            }),
           ],
         ),
       ],
