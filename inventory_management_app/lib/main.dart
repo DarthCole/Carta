@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'providers/inventory_provider.dart';
 import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/signup_screen.dart';
 import 'screens/stores_screen.dart';
 import 'screens/store_detail_screen.dart';
 import 'screens/products_screen.dart';
@@ -12,6 +16,14 @@ import 'screens/purchase_orders_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize env and supabase
+  await dotenv.load(fileName: ".env");
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL'] ?? '',
+    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+  );
+
   await NotificationService().init();
   runApp(const CartaApp());
 }
@@ -84,6 +96,8 @@ class CartaApp extends StatelessWidget {
         initialRoute: '/',
         routes: {
           '/': (context) => const SplashScreen(),
+          '/login': (context) => const LoginScreen(),
+          '/signup': (context) => const SignUpScreen(),
           '/stores': (context) => const StoresScreen(),
           '/store-detail': (context) => const StoreDetailScreen(),
           '/products': (context) => const ProductsScreen(),

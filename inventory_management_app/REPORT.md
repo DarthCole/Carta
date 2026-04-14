@@ -1,5 +1,5 @@
 # CARTA - Inventory Management System
-## Updated Project Report (v1.1.0)
+## Updated Project Report (v1.2.0)
 
 ---
 
@@ -8,7 +8,7 @@
 **Carta** is a mobile inventory management application designed for retail store owners and managers. It enables them to manage stock across multiple stores, categorize products by type and brand, track incoming inventory through purchase orders and deliveries, manually flag low-stock items, verify product authenticity via barcode/QR code scanning, and receive time-based reorder suggestions — all available offline.
 
 **Target Platform:** Android 8.1.0 (API Level 27) through Android 15 (API Level 35)  
-**Version:** 1.1.0
+**Version:** 1.2.0
 
 ---
 
@@ -181,7 +181,27 @@ App Launch → Splash Screen (3s)
 | Status Badges (Low/Reorder/OK) | - | ✓ Required | ✅ **NEW** |
 | Haptic Feedback | - | ✓ Required | ✅ **NEW** |
 | Sound Alerts | - | ✓ Required | ✅ **NEW** |
+| Cloud Database Backup | - | ✓ Required | ✅ **NEW** |
+| Authentication System | - | ✓ Required | ✅ **NEW** |
 
 ---
 
-*Report generated for Carta v1.1.0 — April 2026*
+### 7. What's New in v1.2.0 (Cloud & Security Update)
+
+This update drastically evolves the application architecture from a purely local tool into a robust, cloud-backed **Offline-First Application**.
+
+**Authentication System**
+- Complete Email/Password user authentication integrated with Supabase Auth.
+- Brand new `login_screen.dart` and `signup_screen.dart` utilizing modern frosted-glass aesthetics.
+- Secured application routing: Animated `SplashScreen` silently checks `Supabase.instance.client.auth.currentSession` before granting access to the persistent Dashboard.
+- Secure standard logout functionality inside the main Application Bar.
+
+**Hybrid Cloud Architecture (Supabase x SQLite)**
+- Strict **Separation of Concerns**: The high-speed local engine (`sqflite`) remains completely decoupled from the cloud layer, guaranteeing lightning-fast scans and offline usability if network connections drop.
+- **Auto-Sync Engine**: The centralized `InventoryProvider` orchestrates state. Every successful local write operation instantly fires a background HTTP upsert to the remote Supabase PostgreSQL database.
+- **Manual Sync**: An explicitly requested "Sync to Cloud" feature is embedded as a designated Quick Action. It sequentially iterates all local tables (Stores, Categories, Products, Purchase Orders) and guarantees 1:1 mirroring to the cloud.
+- Environment variables secured using `flutter_dotenv` (`.env`).
+
+---
+
+*Report generated for Carta v1.2.0 — April 2026*

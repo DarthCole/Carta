@@ -6,12 +6,14 @@ import '../models/product.dart';
 import '../models/purchase_order.dart';
 import '../services/database_service.dart';
 import '../services/notification_service.dart';
+import '../services/supabase_service.dart';
 
 /// centralised state management for the carta inventory app.
 /// now includes purchase order management, dashboard data, and haptic feedback.
 class InventoryProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService();
   final NotificationService _notifications = NotificationService();
+  final SupabaseService _supabaseService = SupabaseService();
 
   // ── state fields ──
   List<Store> _stores = [];
@@ -59,18 +61,21 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<void> addStore(String name, String address, String? phone) async {
     final store = Store(name: name, address: address, phone: phone);
-    await _db.insertStore(store);
+    final inserted = await _db.insertStore(store);
+    await _supabaseService.upsertStore(inserted);
     _hapticMedium();
     await loadStores();
   }
 
   Future<void> editStore(Store store) async {
     await _db.updateStore(store);
+    await _supabaseService.upsertStore(store);
     await loadStores();
   }
 
   Future<void> removeStore(int id) async {
     await _db.deleteStore(id);
+    await _supabaseService.deleteStore(id);
     _hapticHeavy();
     await loadStores();
   }
@@ -86,18 +91,21 @@ class InventoryProvider extends ChangeNotifier {
   Future<void> addCategory(String name, String? description) async {
     if (_selectedStore == null) return;
     final cat = models.Category(storeId: _selectedStore!.id!, name: name, description: description);
-    await _db.insertCategory(cat);
+    final inserted = await _db.insertCategory(cat);
+    await _supabaseService.upsertCategory(inserted);
     _hapticMedium();
     await loadCategories();
   }
 
   Future<void> editCategory(models.Category category) async {
     await _db.updateCategory(category);
+    await _supabaseService.upsertCategory(category);
     await loadCategories();
   }
 
   Future<void> removeCategory(int id) async {
     await _db.deleteCategory(id);
+    await _supabaseService.deleteCategory(id);
     _hapticHeavy();
     await loadCategories();
     await loadProducts();
@@ -147,7 +155,8 @@ class InventoryProvider extends ChangeNotifier {
   }
 
   Future<void> addProduct(Product product) async {
-    await _db.insertProduct(product);
+    final inserted = await _db.insertProduct(product);
+    await _supabaseService.upsertProduct(inserted);
     _hapticMedium();
     await loadProducts();
     await loadBrands();
@@ -155,12 +164,14 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<void> updateProduct(Product product) async {
     await _db.updateProduct(product);
+    await _supabaseService.upsertProduct(product);
     await loadProducts();
   }
 
   Future<void> updateProductQuantity(Product product, int newQuantity) async {
     final updated = product.copyWith(quantity: newQuantity);
     await _db.updateProduct(updated);
+    await _supabaseService.upsertProduct(updated);
     _hapticLight();
 
     if (newQuantity <= product.restockThreshold && _selectedStore != null) {
@@ -173,6 +184,7 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<void> removeProduct(int id) async {
     await _db.deleteProduct(id);
+    await _supabaseService.deleteProduct(id);
     _hapticHeavy();
     await loadProducts();
     await loadBrands();
@@ -181,6 +193,7 @@ class InventoryProvider extends ChangeNotifier {
   Future<void> verifyProduct(Product product, bool verified) async {
     final updated = product.copyWith(verified: verified);
     await _db.updateProduct(updated);
+    await _supabaseService.upsertProduct(updated);
     await _notifications.showVerificationResult(product.name, verified);
     _hapticMedium();
     await loadProducts();
@@ -191,6 +204,7 @@ class InventoryProvider extends ChangeNotifier {
   Future<void> flagLowStock(Product product) async {
     final updated = product.copyWith(lowStockFlagged: true);
     await _db.updateProduct(updated);
+    await _supabaseService.upsertProduct(updated);
     _hapticMedium();
     await loadProducts();
   }
@@ -198,6 +212,7 @@ class InventoryProvider extends ChangeNotifier {
   Future<void> unflagLowStock(Product product) async {
     final updated = product.copyWith(lowStockFlagged: false);
     await _db.updateProduct(updated);
+    await _supabaseService.upsertProduct(updated);
     _hapticLight();
     await loadProducts();
   }
@@ -211,13 +226,24 @@ class InventoryProvider extends ChangeNotifier {
   }
 
   Future<void> addPurchaseOrder(PurchaseOrder order) async {
-    await _db.insertPurchaseOrder(order);
+    final inserted = await _db.insertPurchaseOrder(order);
+    await _supabaseService.upsertPurchaseOrder(inserted);
     _hapticMedium();
     await loadPurchaseOrders();
   }
 
   Future<void> markOrderDelivered(PurchaseOrder order) async {
     await _db.markOrderDelivered(order);
+    
+    // Also push the updated order and product to Supabase so it stays in sync
+    final updatedOrder = order.copyWith(delivered: true, deliveryDate: DateTime.now());
+    await _supabaseService.upsertPurchaseOrder(updatedOrder);
+    
+    // We should ideally fetch the updated product from local db instead of blind updating
+    final products = await _db.getProducts(_selectedStore!.id!);
+    final updatedProduct = products.firstWhere((p) => p.id == order.productId);
+    await _supabaseService.upsertProduct(updatedProduct);
+
     await _notifications.showOrderDelivered(order.productName, order.quantity);
     _hapticHeavy();
     await loadPurchaseOrders();
@@ -226,6 +252,7 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<void> deletePurchaseOrder(int id) async {
     await _db.deletePurchaseOrder(id);
+    await _supabaseService.deletePurchaseOrder(id);
     _hapticHeavy();
     await loadPurchaseOrders();
   }
