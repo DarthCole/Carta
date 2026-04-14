@@ -40,6 +40,31 @@ class SupabaseService {
     }
   }
 
+  Future<void> syncDownAll() async {
+    try {
+      debugPrint('Supabase: starting full manual pull sync...');
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+
+      final stores = await _supabase.from('stores').select().eq('user_id', user.id);
+      final categories = await _supabase.from('categories').select().eq('user_id', user.id);
+      final products = await _supabase.from('products').select().eq('user_id', user.id);
+      final orders = await _supabase.from('purchase_orders').select().eq('user_id', user.id);
+
+      await _db.populateFromCloud(
+        stores: stores,
+        categories: categories,
+        products: products,
+        purchaseOrders: orders,
+      );
+
+      debugPrint('Supabase: pull sync completed successfully.');
+    } catch (e) {
+      debugPrint('Supabase: pull sync failed - $e');
+      rethrow;
+    }
+  }
+
   Map<String, dynamic> _injectUserId(Map<String, dynamic> data) {
     final user = _supabase.auth.currentUser;
     if (user != null) {

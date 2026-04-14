@@ -30,6 +30,40 @@ class DatabaseService {
     });
   }
 
+  Future<void> populateFromCloud({
+    required List<Map<String, dynamic>> stores,
+    required List<Map<String, dynamic>> categories,
+    required List<Map<String, dynamic>> products,
+    required List<Map<String, dynamic>> purchaseOrders,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('purchase_orders');
+      await txn.delete('products');
+      await txn.delete('categories');
+      await txn.delete('stores');
+
+      Map<String, dynamic> strip(Map<String, dynamic> map) {
+        final m = Map<String, dynamic>.from(map);
+        m.remove('user_id');
+        return m;
+      }
+
+      for (var s in stores) {
+        await txn.insert('stores', strip(s), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (var c in categories) {
+        await txn.insert('categories', strip(c), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (var p in products) {
+        await txn.insert('products', strip(p), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (var o in purchaseOrders) {
+        await txn.insert('purchase_orders', strip(o), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+  }
+
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'carta_v2.db');
